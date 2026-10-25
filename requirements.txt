@@ -1,0 +1,12 @@
+# main environment (gates, replays, analysis, figures)
+numpy
+scipy
+pandas
+matplotlib
+torch==2.5.1
+sentence-transformers<4
+transformers<4.50
+
+# separate environment for the LLM steps (llm_judge.py, rewrite_cues.py, sample_fa.py, retranslate.py):
+#   vllm==0.6.4.post1
+#   transformers==4.46.3

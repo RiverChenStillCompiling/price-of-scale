@@ -1,0 +1,172 @@
+[
+ {
+  "qid": "f523d9fe",
+  "question": "I wanted to check back on our previous conversation about Netflix. I mentioned that I wanted to be able to access all seasons of old shows? Do you remember what show I used as an example, the one that only had the last season available?",
+  "cue": "I'm trying to catch up on Doc Martin, do you know when the new episode is airing?"
+ },
+ {
+  "qid": "dc439ea3",
+  "question": "I was looking back at our previous conversation about Native American powwows and I was wondering, which traditional game did you say was often performed by skilled dancers at powwows?",
+  "cue": "I'm about to watch a video on traditional dances; I hope to see some skilled performers doing the Hoop Dance."
+ },
+ {
+  "qid": "51a45a95",
+  "question": "Where did I redeem a $5 coupon on coffee creamer?",
+  "cue": "I should check the expiration date on the coffee creamer; I seem to remember using a coupon there."
+ },
+ {
+  "qid": "58bf7951",
+  "question": "What play did I attend at the local community theater?",
+  "cue": "I should look up the next play at the community theater since I enjoyed The Glass Menagerie so much."
+ },
+ {
+  "qid": "1e043500",
+  "question": "What is the name of the playlist I created on Spotify?",
+  "cue": "I should switch to the Summer Vibes playlist while I'm cleaning, it's such a nice day."
+ },
+ {
+  "qid": "c5e8278d",
+  "question": "What was my last name before I changed it?",
+  "cue": "I should double-check the Johnson family photos to send to the reunion."
+ },
+ {
+  "qid": "3b6f954b",
+  "question": "Where did I attend for my study abroad program?",
+  "cue": "I need to find that recipe for Vegemite scrolls; I remember making them while exploring Melbourne."
+ },
+ {
+  "qid": "0862e8bf",
+  "question": "What is the name of my cat?",
+  "cue": "I should fill Luna's food dish; she must be hungry."
+ },
+ {
+  "qid": "86b68151",
+  "question": "Where did I buy my new bookshelf from?",
+  "cue": "I need to pick up another piece of furniture, should I check IKEA's inventory again?"
+ },
+ {
+  "qid": "1faac195",
+  "question": "Where does my sister Emily live?",
+  "cue": "I need to send a package to Emily, should I use the Denver address?"
+ },
+ {
+  "qid": "f4f1d8a4",
+  "question": "Who gave me a new stand mixer as a birthday gift?",
+  "cue": "Mixing up a batch of cookies today, just like we did with the stand mixer my sister gave me."
+ },
+ {
+  "qid": "f35224e0",
+  "question": "What is the total number of episodes I've listened to from 'How I Built This' and 'My Favorite Murder'?",
+  "cue": "I should check the podcast app to see what's next in my queue, I think I left off at 27 episodes total between those two shows."
+ },
+ {
+  "qid": "ce6d2d27",
+  "question": "What day of the week do I take a cocktail-making class?",
+  "cue": "I should set a reminder for my cocktail-making class on Friday."
+ },
+ {
+  "qid": "a1eacc2a",
+  "question": "How many short stories have I written since I started writing regularly?",
+  "cue": "I should organize my notes on the short stories; it feels like just the other day I finished the seventh one."
+ },
+ {
+  "qid": "1cea1afa",
+  "question": "How many Instagram followers do I currently have?",
+  "cue": "I should check my Instagram stats to see if there are any updates since I had around 600 followers last time."
+ },
+ {
+  "qid": "22d2cb42",
+  "question": "Where did I get my guitar serviced?",
+  "cue": "I need to pick up my guitar from the music shop on Main St. later."
+ },
+ {
+  "qid": "eace081b",
+  "question": "Where am I planning to stay for my birthday trip to Hawaii?",
+  "cue": "I need to check the weather forecast again since I have another event planned on Oahu this week."
+ },
+ {
+  "qid": "dfde3500",
+  "question": "What day of the week did I meet with my previous language exchange tutor Juan?",
+  "cue": "I should check my schedule for Wednesday to see if there are any conflicts with my language exchange meeting."
+ },
+ {
+  "qid": "0977f2af",
+  "question": "What new kitchen gadget did I invest in before getting the Air Fryer?",
+  "cue": "I'm thinking about making some rice; should I use the Instant Pot or the Air Fryer?"
+ },
+ {
+  "qid": "gpt4_ec93e27f",
+  "question": "Which mode of transport did I use most recently, a bus or a train?",
+  "cue": "I need to double-check the schedule for my next train ride."
+ },
+ {
+  "qid": "gpt4_f420262d",
+  "question": "What was the airline that I flied with on Valentine's day?",
+  "cue": "I need to book another flight, should I check the availability with American Airlines again?"
+ },
+ {
+  "qid": "gpt4_468eb064",
+  "question": "Who did I meet with during the lunch last Tuesday?",
+  "cue": "I should check if Emma has any updates on the project since we last met."
+ },
+ {
+  "qid": "gpt4_b5700ca0",
+  "question": "Where did I attend the religious activity last week?",
+  "cue": "I need to check the address for the Episcopal Church again since we have another event there this weekend."
+ },
+ {
+  "qid": "gpt4_76048e76",
+  "question": "Which vehicle did I take care of first in February, the bike or the car?",
+  "cue": "I need to check the weather before I go out to clean the bike again."
+ },
+ {
+  "qid": "gpt4_2d58bcd6",
+  "question": "Which book did I finish reading first, 'The Hate U Give' or 'The Nightingale'?",
+  "cue": "I can't believe I finished 'The Hate U Give' before 'The Nightingale'; time sure flies when you're reading!"
+ },
+ {
+  "qid": "gpt4_65aabe59",
+  "question": "Which device did I set up first, the smart thermostat or the mesh network system?",
+  "cue": "I should check the settings on the smart thermostat since it was the first device to set up."
+ },
+ {
+  "qid": "gpt4_9a159967",
+  "question": "Which airline did I fly with the most in March and April?",
+  "cue": "I should check if there are any upcoming flights with United Airlines this month."
+ },
+ {
+  "qid": "cc6d1ec1",
+  "question": "How long had I been bird watching when I attended the bird watching workshop?",
+  "cue": "I can't believe it's been two months since I started bird watching, this workshop has so many interesting sessions!"
+ },
+ {
+  "qid": "gpt4_d9af6064",
+  "question": "Which device did I set up first, the smart thermostat or the new router?",
+  "cue": "I should check the settings on the new router since it controls the WiFi for my smart home devices."
+ },
+ {
+  "qid": "gpt4_2f56ae70",
+  "question": "Which streaming service did I start using most recently?",
+  "cue": "I should check if there are any new Disney+ releases today."
+ },
+ {
+  "qid": "gpt4_fe651585",
+  "question": "Who became a parent first, Rachel or Alex?",
+  "cue": "I can't believe Alex is already planning the next vacation, seems like just yesterday they brought their newborn along for the first time."
+ },
+ {
+  "qid": "gpt4_5501fe77",
+  "question": "Which social media platform did I gain the most followers on over the past month?",
+  "cue": "I should check my TikTok stats before heading to the meeting to see how the new video did."
+ },
+ {
+  "qid": "gpt4_2ba83207",
+  "question": "Which grocery store did I spend the most money at in the past month?",
+  "cue": "I should check the budget for Thrive Market this week."
+ },
+ {
+  "qid": "a9f6b44c",
+  "question": "How many bikes did I service or plan to service in March?",
+  "cue": "I should check the schedule for next month; I seem to remember having a busy week with bikes in March."
+ }
+]
