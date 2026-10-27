@@ -6,6 +6,12 @@ For each cue and store size N:
 The null sample for recall-v1 is store + 300 background turns from the same user's history,
 exactly as recall.js does (median / 1.4826*MAD, spread floors 0.04 lexical, 0.03 semantic).
 swap_p: the cue-swap conformal p-value (see cue_swap_p). One row per trial; gates are applied afterwards in analyse.py.
+
+BG_MODE chooses where the 300 background items come from (always disjoint from the store):
+  pool  the null pool, which needs evidence labels to build (BG_POOL=1 is the same)
+  evid  the null pool plus the evidence turns
+  full  every user turn of the user's history, nothing removed: what a deployed assistant has
+Ablation columns give the best score of one scorer at a time on the same store and background.
 """
 import os, sys, math, csv
 import numpy as np
@@ -18,7 +24,23 @@ z = np.load(src)
 lex, sem, shared = z["lex"], z["sem"], z["shared"]
 pool, pp, evid, ep = z["pool"], z["pool_ptr"], z["evid"], z["evid_ptr"]
 qids, qtypes = z["qids"], z["qtypes"]
+sess = z["sess"]
 rng = np.random.default_rng(20261025)
+BG_MODE = os.environ.get("BG_MODE") or ("pool" if os.environ.get("BG_POOL") else "evid")
+by_session = {}
+for i, sid in enumerate(sess):
+    by_session.setdefault(str(sid), []).append(i)
+by_conv = {}
+for i, sid in enumerate(sess):
+    if ":" in str(sid):
+        by_conv.setdefault(str(sid).split(":")[0], []).append(i)
+
+def full_history(q, P, Ev):
+    """All user turns of this user's history; evidence sessions are found from the stored evidence turns."""
+    if ":" in str(sess[P[0]]):  # LoCoMo: every turn of the conversation
+        return np.array(by_conv[str(sess[P[0]]).split(":")[0]], dtype=np.int64)
+    extra = [i for s_ in {str(sess[e]) for e in Ev} for i in by_session[s_]]
+    return np.unique(np.concatenate([P, np.array(extra, dtype=P.dtype)]))
 
 ALPHA = 0.05
 
@@ -92,7 +114,8 @@ cols = ["qid", "qtype", "N", "kind", "rep",
         "v1_z", "v1_top_ev", "v1_thr",
         "max_lex_z", "max_sem_z", "max_lex_sim", "max_sem_sim",
         "lex_top_ev", "sem_top_ev",
-        "evt_exp_fire", "evt_exp_top_ev", "evt_gpd_fire", "evt_gpd_top_ev", "evt_exp_padj", "evt_gpd_padj", "swap_p"]
+        "evt_exp_fire", "evt_exp_top_ev", "evt_gpd_fire", "evt_gpd_top_ev", "evt_exp_padj", "evt_gpd_padj", "swap_p",
+        "sem_z_top_ev", "semel_z", "semel_top_ev", "lexel_z", "lexel_top_ev", "both_z", "both_top_ev", "n_bg"]
 with open(out, "w", newline="") as fh:
     w = csv.writer(fh)
     w.writerow(cols)
@@ -102,14 +125,14 @@ with open(out, "w", newline="") as fh:
         if not len(Ev) or str(qids[q]).endswith("_abs"):
             continue
         L, S, H = lex[q].astype(np.float32), sem[q].astype(np.float32), shared[q]
-        # BG_POOL=1 draws the background from the null pool only, so it can never contain evidence
-        history = P if os.environ.get("BG_POOL") else np.concatenate([P, Ev])
+        history = {"pool": P, "evid": np.concatenate([P, Ev]), "full": None}[BG_MODE]
+        if history is None:
+            history = full_history(q, P, Ev)
         for N in Ns:
             if len(P) < N:
                 continue
             thr = max(2.0, math.sqrt(2 * math.log(N * 2))) + 0.5
             for r in range(reps):
-                bg = rng.choice(history, size=min(BG, len(history)), replace=False)
                 for kind in ("null", "pos"):
                     if kind == "null":
                         store = rng.choice(P, size=N, replace=False)
@@ -117,8 +140,9 @@ with open(out, "w", newline="") as fh:
                         store = np.concatenate([rng.choice(P, size=N - 1, replace=False), rng.choice(Ev, size=1)])
                     is_ev = np.isin(store, Ev)
                     ls, ss = L[store], S[store]
-                    # background never repeats a store item, as in DSH where raw records and cards are distinct
-                    b = np.setdiff1d(bg, store, assume_unique=True)
+                    # background: up to 300 history items outside the store, as in DSH where raw records and cards are distinct
+                    avail = np.setdiff1d(history, store)
+                    b = rng.choice(avail, size=min(BG, len(avail)), replace=False)
                     lnull, snull = np.concatenate([ls, L[b]]), np.concatenate([ss, S[b]])
                     lc, lsd = null(lnull, 0.04)
                     sc, ssd = null(snull, 0.03)
@@ -130,10 +154,16 @@ with open(out, "w", newline="") as fh:
                     sz_ok = np.where(ss >= SEM_FLOOR, sz, -np.inf)
                     best = np.maximum(lz_ok, sz_ok)
                     i = int(np.argmax(best))
+                    both = np.maximum(lz, sz)
+                    abl = [int(is_ev[int(np.argmax(sz))])]
+                    for arr in (sz_ok, lz_ok, both):
+                        j = int(np.argmax(arr))
+                        abl += [f"{arr[j]:.4f}", int(is_ev[j])]
+                    abl.append(len(b))
                     swap = cue_swap_p(q, store, b, best[i]) if np.isfinite(best[i]) else 1.0
                     w.writerow([qids[q], qtypes[q], N, kind, r,
                                 f"{best[i]:.4f}", int(is_ev[i]), f"{thr:.4f}",
                                 f"{lz.max():.4f}", f"{sz.max():.4f}", f"{ls.max():.4f}", f"{ss.max():.4f}",
                                 int(is_ev[int(np.argmax(ls))]), int(is_ev[int(np.argmax(ss))]),
-                                int(fe), int(is_ev[ie]), int(fg), int(is_ev[ig]), f"{pe:.4g}", f"{pg:.4g}", f"{swap:.4f}"])
+                                int(fe), int(is_ev[ie]), int(fg), int(is_ev[ig]), f"{pe:.4g}", f"{pg:.4g}", f"{swap:.4f}"] + abl)
 print("done", out)

@@ -1,5 +1,5 @@
-"""Paper figures and tables from the final runs (pool-only background, cue-swap included).
-Usage: python make_figs.py out_dir fig_dir
+"""Paper figures and tables. Runs use the full-history background (directories with suffix _full).
+Usage: python make_figs.py out_dir fig_dir [suffix]
 """
 import sys, json, os
 import numpy as np, pandas as pd
@@ -8,6 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 O, F = sys.argv[1], sys.argv[2]
+SUF = sys.argv[3] if len(sys.argv) > 3 else "_full"
 os.makedirs(F, exist_ok=True)
 plt.rcParams.update({"font.family": "serif", "font.serif": ["TeX Gyre Termes", "Nimbus Roman No9 L", "DejaVu Serif"], "mathtext.fontset": "stix", "font.size": 8.5, "axes.titlesize": 9, "axes.labelsize": 8.5,
                      "legend.fontsize": 7, "xtick.labelsize": 7.5, "ytick.labelsize": 7.5,
@@ -21,7 +22,7 @@ G = {"fixed cosine (tuned at N0)": ("fixed cosine", "#9E9E9E", "s"),
      "recall-v1 z, re-tuned per N": ("z-score, oracle per N", "#2F4B7C", "+")}
 
 def gates(d):
-    g = pd.read_csv(f"{O}/{d}/gates.csv")
+    g = pd.read_csv(f"{O}/{d}{SUF}/gates.csv")
     return g[g.gate.isin(G)]
 
 def lines(ax, g, metric, names, band=False):
@@ -50,32 +51,30 @@ ax[1].legend(frameon=False, loc="lower left")
 fig.tight_layout(); fig.savefig(f"{F}/fig1_scale.pdf"); plt.close(fig)
 
 # Figure 2: growth of the null maximum per channel
-fig, ax = plt.subplots(1, 3, figsize=(6.8, 2.2))
+fig, ax = plt.subplots(1, 3, figsize=(6.8, 2.4))
 for a, d, title in zip(ax, ["m", "m_implicit", "locomo"], ["LongMemEval-M", "LongMemEval-M, implicit cues", "LoCoMo"]):
-    s = json.load(open(f"{O}/{d}/summary.json"))["growth"]
+    tr = pd.read_csv(f"{O}/trials_{d}{SUF}.csv", usecols=["N", "kind", "max_sem_z", "max_lex_z"], keep_default_na=False)
+    tr = tr[tr.kind == "null"]
     for col, lab, c in (("max_sem_z", "semantic", "#4C78A8"), ("max_lex_z", "lexical", "#C96442")):
-        m = s[col]["mean_by_N"]
-        x = np.log(np.array([int(k) for k in m], float)); y = np.array(list(m.values()))
-        a.plot(x, y, "o", ms=3, color=c, label=lab)
-        for fit, ls in (("sqrt_lnN", "-"), ("lnN", "--")):
-            p = s[col]["fits"][fit]
-            xx = np.linspace(x.min(), x.max(), 50)
-            a.plot(xx, p["a"] + p["b"] * (np.sqrt(xx) if fit == "sqrt_lnN" else xx), ls, color=c, lw=.8, alpha=.7)
+        g2 = tr.groupby("N")[col]
+        x = np.log(np.array(g2.mean().index, float))
+        a.plot(x, g2.mean().values, "o-", ms=3, lw=.9, color=c, label=f"{lab}, mean")
+        a.plot(x, g2.quantile(0.95).values, "^--", ms=3, lw=.9, color=c, mfc="white", label=f"{lab}, 95% quantile")
     a.set_title(title); a.set_xlabel(r"$\ln N$"); a.grid(alpha=.25, lw=.5)
-ax[0].set_ylabel("mean null maximum (z)")
-ax[0].legend(frameon=False, loc="upper left")
+ax[0].set_ylabel("null maximum (z)")
+ax[0].legend(frameon=False, loc="upper left", fontsize=6)
 fig.tight_layout(); fig.savefig(f"{F}/fig2_tails.pdf"); plt.close(fig)
 
 # Figure 3: Proposition 1 against the oracle gate
 fig, ax = plt.subplots(1, 2, figsize=(6.8, 2.4))
 for a, d, title in zip(ax, ["m", "m_large"], ["bge-small", "bge-large"]):
-    t = json.load(open(f"{O}/{d}/theory2.json"))["global"]
+    t = json.load(open(f"{O}/{d}{SUF}/theory2.json"))["global"]
     N = np.array([int(k) for k in t])
     emp = np.array([t[k]["empirical_hit"] for k in t])
     ex = np.array([t[k]["empirical_tau"]["exact_hit"] for k in t])
     up = np.array([t[k]["empirical_tau"]["upper_mean_G"] for k in t])
     lo = np.array([t[k]["empirical_tau"]["lower_mean_(1-a_c)G_c"] for k in t])
-    a.fill_between(N, lo, up, color="#C96442", alpha=.18, lw=0, label="bounds (Prop. 1, Cor. 5)")
+    a.fill_between(N, lo, up, color="#C96442", alpha=.18, lw=0, label="bounds (Cor. 5)")
     a.plot(N, ex, "-", color="#C96442", lw=1.2, label="exact model")
     a.plot(N, emp, "o", color="k", ms=3.5, label="observed")
     a.set_xscale("log", base=2); a.set_yscale("log"); a.set_xlabel("memory store size $N$"); a.set_title(title)
@@ -101,11 +100,11 @@ h, l = ax[0].get_legend_handles_labels()
 fig.legend(h, l, frameon=False, ncol=3, loc="lower center", fontsize=6.8)
 fig.tight_layout(rect=(0, 0.13, 1, 1)); fig.savefig(f"{F}/fig4_llm.pdf"); plt.close(fig)
 
-# Table 1: hits at (near) matched false alarms
+# Table 2: hits at (near) matched false alarms
 rows = []
 for d, lab in (("m", "explicit, bge-small"), ("m_large", "explicit, bge-large"),
                ("m_implicit", "implicit, bge-small"), ("m_implicit_large", "implicit, bge-large")):
-    g = pd.read_csv(f"{O}/{d}/gates.csv")
+    g = pd.read_csv(f"{O}/{d}{SUF}/gates.csv")
     for N in (8, 128, 2048):
         r = {"setting": lab, "N": N}
         for name, key in (("cosine, re-tuned per N (oracle)", "cos"), ("recall-v1 z, re-tuned per N", "z"),
@@ -113,5 +112,5 @@ for d, lab in (("m", "explicit, bge-small"), ("m_large", "explicit, bge-large"),
             x = g[(g.gate == name) & (g.N == N)].iloc[0]
             r[f"{key}_hit"], r[f"{key}_fa"] = x.hit, x.false_alarm
         rows.append(r)
-pd.DataFrame(rows).round(3).to_csv(f"{F}/table1.csv", index=False)
+pd.DataFrame(rows).round(3).to_csv(f"{F}/table2.csv", index=False)
 print(pd.DataFrame(rows).round(3).to_string(index=False))

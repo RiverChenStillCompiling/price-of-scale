@@ -6,8 +6,12 @@ Code, data and results for the paper *The Price of Scale in Proactive Memory Rec
 An assistant that brings up a memory without being asked decides at every turn whether anything in its store is
 worth an interruption. The paper shows that this is a multiple-testing problem whose difficulty grows with the size
 `N` of the store: a gate that keeps its false-alarm rate at `alpha` works at a per-item false-positive rate of about
-`-ln(1 - alpha) / N`, so its hit rate falls with `N` as the single-comparison ROC curve dictates. It also gives a
-label-free cue-swap conformal gate with a finite-sample false-alarm guarantee.
+`-ln(1 - alpha) / N`, so its hit rate falls with `N` as the single-comparison ROC curve dictates. It also gives a cue-swap conformal gate
+whose threshold needs no labels and which has a finite-sample false-alarm guarantee under exchangeability.
+
+The results here follow version 2 of the paper, in which the background sample that standardises the scores is drawn
+from the user's whole history outside the store. `results/pool_background/` holds the same runs with the background
+drawn from the labelled null pool, the protocol of version 1.
 
 ## Contents
 
@@ -19,8 +23,8 @@ label-free cue-swap conformal gate with a finite-sample false-alarm guarantee.
 | `reproduce.sh` | runs every experiment in the paper in order |
 | `data/implicit_cues_longmemeval_m.json` | 385 implicit cues: first-person messages written for LongMemEval questions that do not ask about the memory or contain the answer |
 | `data/annotation/` | 270 annotated items (240 false alarms, 30 evidence turns) with labels from one human and two LLM annotators, and the guideline |
-| `results/` | gate tables (`gates.csv`), null-maximum growth fits (`summary.json`), theory checks, LLM-judge outputs and ablation summaries for every setting |
-| `figures/` | the figures and Table 1 of the paper |
+| `results/` | per setting: gate tables (`gates.csv`), null-maximum growth fits (`summary.json`) and theory checks; `matched_fa/` scorer components at matched false alarms; `intervals/` cluster-bootstrap intervals and quantile growth fits; `theory/` out-of-sample prediction and simulation; `ablation/` cue-swap parameters and latency; `llm/` LLM-judge outputs; `pool_background/` the null-pool background |
+| `figures/` | the figures of the paper and the data of Table 2 |
 
 ## Using the gates
 
