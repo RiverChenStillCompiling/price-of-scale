@@ -1,7 +1,7 @@
 # The Price of Scale in Proactive Memory Recall
 
 Code, data and results for the paper *The Price of Scale in Proactive Memory Recall*
-(Yichuan Chen and Xin Wang, Zhejiang Sci-Tech University).
+(Yichuan Chen and Xin Wang, Zhejiang Sci-Tech University), [arXiv:2610.34507](https://arxiv.org/abs/2610.34507).
 
 An assistant that brings up a memory without being asked decides at every turn whether anything in its store is
 worth an interruption. The paper shows that this is a multiple-testing problem whose difficulty grows with the size
@@ -67,4 +67,13 @@ Code: MIT (see `LICENSE`). The annotation labels and the implicit cues are relea
 
 ## Citation
 
-The arXiv identifier will be added on release.
+```bibtex
+@misc{chen2026price,
+  title         = {The Price of Scale in Proactive Memory Recall},
+  author        = {Chen, Yichuan and Wang, Xin},
+  year          = {2026},
+  eprint        = {2610.34507},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL}
+}
+```
