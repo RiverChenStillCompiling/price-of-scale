@@ -23,7 +23,7 @@ drawn from the labelled null pool, the protocol of version 1.
 | `reproduce.sh` | runs every experiment in the paper in order |
 | `data/implicit_cues_longmemeval_m.json` | 385 implicit cues: first-person messages written for LongMemEval questions that do not ask about the memory or contain the answer |
 | `data/annotation/` | 270 annotated items (240 false alarms, 30 evidence turns) with labels from one human and two LLM annotators, and the guideline |
-| `results/` | per setting: gate tables (`gates.csv`), null-maximum growth fits (`summary.json`) and theory checks; `matched_fa/` scorer components at matched false alarms; `intervals/` cluster-bootstrap intervals and quantile growth fits; `theory/` out-of-sample prediction and simulation; `ablation/` cue-swap parameters and latency; `llm/` LLM-judge outputs; `pool_background/` the null-pool background |
+| `results/` | per setting: gate tables (`gates.csv`), null-maximum growth fits (`summary.json`) and theory checks; `matched_fa/` scorer components at matched false alarms; `intervals/` cluster-bootstrap intervals and quantile growth fits; `theory/` out-of-sample prediction and simulation; `ablation/` cue-swap parameters and latency; `llm/` LLM-judge outputs; `pool_background/` the null-pool background; `chronological/` the chronological replay; `sensitivity/` stores with several relevant memories; `triggerbench/` TriggerBench; `cross_encoder/` the reranker gate |
 | `figures/` | the figures of the paper and the data of Table 2 |
 
 ## Using the gates
@@ -50,14 +50,16 @@ if speak:
 
 1. Data: download `longmemeval_s_cleaned.json` and `longmemeval_m_cleaned.json` from
    [xiaowu0162/longmemeval-cleaned](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned) and `locomo10.json`
-   from [snap-research/locomo](https://github.com/snap-research/locomo) into `data/raw/`.
+   from [snap-research/locomo](https://github.com/snap-research/locomo) into `data/raw/`, and
+   `benchmark/prospective_memory/data` of [TriggerBench](https://github.com/KristenZHANG/TriggerBench-Official)
+   (commit `9e2185c`) into `data/raw/triggerbench/`.
 2. Models: `BAAI/bge-small-en-v1.5`, `BAAI/bge-large-en-v1.5`, `Qwen/Qwen2.5-7B-Instruct-AWQ` and
-   `Qwen/Qwen2.5-14B-Instruct-AWQ`.
+   `Qwen/Qwen2.5-14B-Instruct-AWQ`, and `BAAI/bge-reranker-base` for the cross-encoder gate.
 3. Environments: see `requirements.txt`; the LLM steps use a separate environment with vLLM.
 4. Run
 
    ```bash
-   SMALL=... LARGE=... Q7=... Q14=... PY_LLM=... ./reproduce.sh
+   SMALL=... LARGE=... Q7=... Q14=... RERANKER=... PY_LLM=... ./reproduce.sh
    ```
 
 All runs in the paper used one RTX 3090. Scoring LongMemEval-M takes about 4 minutes with bge-small and 15 with

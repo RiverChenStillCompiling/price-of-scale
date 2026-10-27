@@ -12,6 +12,12 @@ BG_MODE chooses where the 300 background items come from (always disjoint from t
   evid  the null pool plus the evidence turns
   full  every user turn of the user's history, nothing removed: what a deployed assistant has
 Ablation columns give the best score of one scorer at a time on the same store and background.
+POS_MODE changes what the positive store holds besides N - m null turns (KINDS=pos skips the null trials):
+  one      one evidence turn (default)
+  all      every evidence turn of the question
+  dup3     one evidence turn three times, a fact repeated
+  session  every user turn of one evidence session
+HIT_REL=1 counts a firing on any of these items as a hit.
 """
 import os, sys, math, csv
 import numpy as np
@@ -27,6 +33,9 @@ qids, qtypes = z["qids"], z["qtypes"]
 sess = z["sess"]
 rng = np.random.default_rng(20261025)
 BG_MODE = os.environ.get("BG_MODE") or ("pool" if os.environ.get("BG_POOL") else "evid")
+POS_MODE = os.environ.get("POS_MODE", "one")
+KINDS = os.environ.get("KINDS", "null,pos").split(",")
+HIT_REL = bool(os.environ.get("HIT_REL"))  # count any relevant item of the positive store as a hit
 by_session = {}
 for i, sid in enumerate(sess):
     by_session.setdefault(str(sid), []).append(i)
@@ -133,12 +142,17 @@ with open(out, "w", newline="") as fh:
                 continue
             thr = max(2.0, math.sqrt(2 * math.log(N * 2))) + 0.5
             for r in range(reps):
-                for kind in ("null", "pos"):
+                for kind in KINDS:
                     if kind == "null":
                         store = rng.choice(P, size=N, replace=False)
                     else:
-                        store = np.concatenate([rng.choice(P, size=N - 1, replace=False), rng.choice(Ev, size=1)])
-                    is_ev = np.isin(store, Ev)
+                        e = rng.choice(Ev, size=1)
+                        rel = {"one": e, "all": Ev, "dup3": np.repeat(e, 3),
+                               "session": np.array(by_session[str(sess[e[0]])], dtype=P.dtype)}[POS_MODE]
+                        if len(rel) >= N:
+                            continue
+                        store = np.concatenate([rng.choice(P, size=N - len(rel), replace=False), rel])
+                    is_ev = np.isin(store, rel if HIT_REL and kind == "pos" else Ev)
                     ls, ss = L[store], S[store]
                     # background: up to 300 history items outside the store, as in DSH where raw records and cards are distinct
                     avail = np.setdiff1d(history, store)

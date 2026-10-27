@@ -5,6 +5,7 @@
 #   data/raw/longmemeval_s_cleaned.json, data/raw/longmemeval_m_cleaned.json, data/raw/locomo10.json
 #   SMALL, LARGE  paths to bge-small-en-v1.5 and bge-large-en-v1.5
 #   Q7, Q14       paths to Qwen2.5-7B-Instruct-AWQ and Qwen2.5-14B-Instruct-AWQ
+#   RERANKER      path to bge-reranker-base
 #   PY, PY_LLM    python of the main environment and of the vLLM environment (default: python)
 # Outputs go to out/.
 set -euo pipefail
@@ -78,3 +79,31 @@ OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $PY swap_latency.py >
 
 # 8. Figures and Table 2
 $PY make_figs.py "$O" "$O/figs"
+
+# 9. Chronological replay (Table 3)
+$PY embed_items.py $R/longmemeval_m_cleaned.json "$SMALL" "$O/items_m" "$CUES"
+mkdir -p "$O/chronological"
+for s in 0 1 2 3 4 5 6 7; do
+  $PY temporal.py $R/longmemeval_m_cleaned.json "$O/items_m" "$O/scores_m.npz" "$O/trials_m_full.csv" "$O/chronological/t_$s.csv" $s 8
+done
+$PY temporal_table.py "$O/trials_m_full.csv" "$O/chronological/summary" "$O"/chronological/t_?.csv
+
+# 10. Several relevant memories (Appendix G)
+for mode in all dup3 session; do
+  BG_MODE=full POS_MODE=$mode KINDS=pos $PY trials.py "$O/scores_m.npz" "$O/trials_m_pos_$mode.csv" $NS_M 10
+done
+BG_MODE=full POS_MODE=session HIT_REL=1 KINDS=pos $PY trials.py "$O/scores_m.npz" "$O/trials_m_pos_session_rel.csv" $NS_M 10
+$PY sensitivity.py "$O/trials_m_full.csv" "$O/sensitivity.csv" all="$O/trials_m_pos_all.csv" dup3="$O/trials_m_pos_dup3.csv" \
+  session="$O/trials_m_pos_session.csv" session_rel="$O/trials_m_pos_session_rel.csv"
+
+# 11. TriggerBench (Appendix H): benchmark/prospective_memory/data of KristenZHANG/TriggerBench-Official
+#     (commit 9e2185c) in data/raw/triggerbench
+$PY triggerbench.py $R/triggerbench "$SMALL" "$O/tb_small"
+$PY triggerbench_table.py "$O/tb_small_trials.csv" "$O/tb_small_summary.csv"
+
+# 12. Cross-encoder gate (Section 5.9); RERANKER is the path to BAAI/bge-reranker-base
+for name in m m_implicit; do
+  c=$([ $name = m_implicit ] && echo "$CUES" || true)
+  $PY rerank.py $R/longmemeval_m_cleaned.json "$O/scores_$name.npz" "$RERANKER" "$O/rr_$name.csv" 8,64,512,2048 5 $c
+  $PY rerank_table.py "$O/rr_$name.csv" "$O/rr_${name}_summary.csv"
+done
