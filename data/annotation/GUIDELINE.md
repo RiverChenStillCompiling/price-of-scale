@@ -21,7 +21,7 @@ Every LongMemEval session carries a date, so a note saying that something happen
 - `label_human`: one author, a non-native English speaker who read the English text with the translation alongside.
 - `label_claude`: Claude Opus 5.5. `label_gpt`: GPT-6 Sol, given the English text and this guideline in a fresh session.
 - `in_agreement_set`: the 229 items used for the agreement statistics. Items 0-37 are excluded because an earlier
-  translation pass contained errors and the Claude annotator saw the human labels for them; 5 further items were
+  translation pass contained errors and the Claude annotator saw the human labels for them; 3 further items were
   marked "cannot tell" by the human annotator.
 
 Text in `cue` and `memory` comes from LongMemEval (Wu et al., ICLR 2025), released under the MIT licence.
