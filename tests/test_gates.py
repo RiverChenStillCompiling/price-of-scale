@@ -1,6 +1,6 @@
 import numpy as np
 
-from recall_gates import TfidfScorer, best_z, cue_swap_gate, recall_v1_threshold
+from recall_gates import TfidfScorer, best_z, cue_swap_gate, evt_gate, recall_v1_threshold
 
 
 def test_tfidf_scores():
@@ -34,3 +34,12 @@ def test_cue_swap_finds_planted_memory():
     speak, idx, p = cue_swap_gate(np.zeros_like(sem), sem, np.zeros_like(sem, dtype=int), 8)
     assert speak and idx == 3 and p <= 0.05
     assert best_z(np.zeros((1, 10)), np.full((1, 10), 0.1), np.zeros((1, 10)), 5)[0][0] == -np.inf
+
+
+def test_evt_tied_channel_does_not_silence_the_other():
+    """An all-zero lexical channel has no tail; the semantic channel must still decide."""
+    sem = np.linspace(0.2, 0.4, 308)
+    sem[3] = 0.95
+    speak, idx = evt_gate(np.zeros(308), sem, 8)
+    assert speak and idx == 3
+    assert evt_gate(np.zeros(8), np.linspace(0.2, 0.4, 8), 8) == (False, 0)

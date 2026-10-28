@@ -10,7 +10,9 @@ Scorers (best score over the store, and whether its arg-max is the evidence turn
 
 Matched: on the evaluation half, each scorer gets the threshold whose (tie-randomised) false-alarm rate on null
 trials is exactly alpha. Calibrated: threshold from the calibration half's null trials, reported on the evaluation
-half. Paired differences use a cluster bootstrap over questions, or over conversations for LoCoMo.
+half. Hit rates are pooled over trials. Paired differences use a cluster bootstrap over questions, or over
+conversations for LoCoMo, that resamples null and positive trials together and re-estimates every threshold on
+each replicate, so the intervals include the uncertainty of the matched thresholds.
 Usage: python ablation_norm.py trials.csv out_prefix
 """
 import sys, zlib
@@ -44,14 +46,13 @@ def fire_prob(scores, tau, rho):
     s = np.asarray(scores, float)
     return np.where(s > tau, 1.0, np.where(s == tau, rho, 0.0))
 
-rows, per_q, curves = [], {}, []
+rows, hit_pt, curves, boot_data = [], {}, [], {}
 for N, d in t.groupby("N"):
     ev, cal = d[d.half == 1], d[d.half == 0]
     nul, pos = ev[ev.kind == "null"], ev[ev.kind == "pos"]
     for name, (sc, top) in SCORERS.items():
         tau, rho = threshold(nul[sc], ALPHA)
         h = fire_prob(pos[sc], tau, rho) * (pos[top] == 1)
-        per_q[(N, name)] = pd.Series(h.values, index=pos.cluster.values).groupby(level=0).mean()
         ctau, crho = threshold(cal[cal.kind == "null"][sc], ALPHA)
         rows.append({"N": N, "scorer": name, "hit_matched": h.mean(),
                      "fa_calibrated": fire_prob(nul[sc], ctau, crho).mean(),
@@ -59,18 +60,34 @@ for N, d in t.groupby("N"):
         for a in (0.01, 0.02, 0.05, 0.1, 0.2):
             ta, ra = threshold(nul[sc], a)
             curves.append({"N": N, "scorer": name, "alpha": a, "hit": (fire_prob(pos[sc], ta, ra) * (pos[top] == 1)).mean()})
+    hit_pt[N] = {name: fire_prob(pos[sc], *threshold(nul[sc], ALPHA)).dot(pos[top] == 1) / len(pos)
+                for name, (sc, top) in SCORERS.items()}
+    boot_data[N] = (nul, pos)
 res = pd.DataFrame(rows)
 
 rng = np.random.default_rng(0)
 diffs = []
 for N in sorted(t.N.unique()):
+    nul, pos = boot_data[N]
+    cl = np.array(sorted(set(nul.cluster) | set(pos.cluster)))
+    nidx = {c: np.flatnonzero(nul.cluster.values == c) for c in cl}
+    pidx = {c: np.flatnonzero(pos.cluster.values == c) for c in cl}
+    ns = {n: nul[sc].values for n, (sc, _) in SCORERS.items()}
+    ps = {n: (pos[sc].values, (pos[top] == 1).values) for n, (sc, top) in SCORERS.items()}
+    boots = {pair: [] for pair in PAIRS}
+    for _ in range(B):
+        pick = cl[rng.integers(0, len(cl), len(cl))]
+        ni, pi = np.concatenate([nidx[c] for c in pick]), np.concatenate([pidx[c] for c in pick])
+        hit = {}
+        for n in {x for pair in PAIRS for x in pair}:
+            tau, rho = threshold(ns[n][ni], ALPHA)
+            v, ok = ps[n][0][pi], ps[n][1][pi]
+            hit[n] = fire_prob(v, tau, rho).dot(ok) / len(pi)
+        for a, b in PAIRS:
+            boots[(a, b)].append(hit[a] - hit[b])
     for a, b in PAIRS:
-        x, y = per_q[(N, a)], per_q[(N, b)]
-        common = x.index.intersection(y.index)
-        dlt = (x[common] - y[common]).values
-        boots = [dlt[rng.integers(0, len(dlt), len(dlt))].mean() for _ in range(B)]
-        diffs.append({"N": N, "comparison": f"{a} - {b}", "diff": dlt.mean(),
-                      "lo": np.quantile(boots, .025), "hi": np.quantile(boots, .975), "clusters": len(dlt)})
+        diffs.append({"N": N, "comparison": f"{a} - {b}", "diff": hit_pt[N][a] - hit_pt[N][b],
+                      "lo": np.quantile(boots[(a, b)], .025), "hi": np.quantile(boots[(a, b)], .975), "clusters": len(cl)})
 dif = pd.DataFrame(diffs)
 res.to_csv(out + "_matched.csv", index=False)
 dif.to_csv(out + "_paired.csv", index=False)

@@ -54,11 +54,16 @@ def full_history(q, P, Ev):
 ALPHA = 0.05
 
 def tail_fit(x, gpd):
-    """Peaks over the 90th percentile: exponential (xi=0) or GPD by probability-weighted moments."""
+    """Peaks over the 90th percentile: exponential (xi=0) or GPD by probability-weighted moments.
+    None when no tail can be fitted (fewer than 11 scores, or all scores tied)."""
+    if len(x) < 11:
+        return None
     u = np.quantile(x, 0.9)
     if (x > u).sum() < 10:
         u = np.sort(x)[-11]
     y = np.sort(x[x > u] - u)
+    if not len(y):
+        return None
     pu = len(y) / len(x)
     if not gpd:
         return u, pu, max(y.mean(), 1e-6), 0.0
@@ -70,6 +75,8 @@ def tail_fit(x, gpd):
     return u, pu, max(2 * a0 * a1 / d, 1e-6), xi
 
 def tail_p(s, fit):
+    if fit is None:
+        return np.ones(len(s))
     u, pu, sig, xi = fit
     e = np.maximum(s - u, 0)
     if abs(xi) < 1e-6:

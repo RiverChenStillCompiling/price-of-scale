@@ -25,7 +25,7 @@ res, dropped = {}, []
 for (q, c), o in zip(todo, outs):
     msg = o.outputs[0].text.strip().strip('"').split("\n")[0]
     ans = str(data[q]["answer"]).lower().strip(" .")
-    leak = len(ans) <= 40 and ans and ans in msg.lower()
+    leak = ans and ans in msg.lower()
     if leak or re.search(r"\bremember\b|\bdid i\b|\bi told you\b", msg, re.I) or len(msg) < 10:
         dropped.append({"qid": q, "question": c, "cue": msg})
         continue

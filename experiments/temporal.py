@@ -2,7 +2,8 @@
 
 Sessions are ordered by date. At time t the store holds every user turn of earlier sessions, the null sample for
 standardisation is the store itself, and the cue-swap gate takes its K reference cues from the user's own earlier
-turns, each compared with the store minus its own session.
+turns, each compared with the store minus its own session. The tf-idf weights are recomputed at every decision from
+the document frequencies of the store alone, so no lexical score uses text that has not yet arrived.
   turn     the opening user turn of a session is the cue, at the first three sessions whose store reaches each
            target size; every firing is an interruption, relevant or not
   q_end    the question (or its implicit rewrite) after the last session
@@ -33,6 +34,16 @@ TAU_LEX = float(np.quantile(cal[cal.N == 8].max_lex_sim, 1 - ALPHA))
 TAU_Z = {N: float(np.quantile(cal[cal.N == N].v1_z, 1 - ALPHA)) for N in TARGETS}
 rng = np.random.default_rng(1027 + shard)
 
+# The saved tf-idf rows are (1 + ln tf) * idf / norm with idf from the whole corpus; dividing by that idf and
+# multiplying by an idf from the store, then renormalising, gives the store-only weights exactly.
+D_ALL, DF_ALL = X.shape[0], X.getnnz(axis=0)
+IDF_ALL = np.log(1 + (D_ALL + 1) / (DF_ALL + 0.5))
+
+def reweight(m, r):
+    m = sp.csr_matrix(m.multiply(r))
+    n = np.sqrt(np.asarray(m.multiply(m).sum(1))).ravel()
+    return sp.diags(1 / np.maximum(n, 1e-12)) @ m
+
 key2idx = {}
 for q in data:
     for sid, ss in zip(q["haystack_session_ids"], q["haystack_sessions"]):
@@ -40,11 +51,11 @@ for q in data:
             if t["role"] == "user" and (sid, ti) not in key2idx:
                 key2idx[(sid, ti)] = len(key2idx)
 
-def scores_of(ce, cx, items):
-    """Semantic, lexical and shared-term scores of cue rows against items."""
+def scores_of(ce, cx, items, r):
+    """Semantic, lexical and shared-term scores of cue rows against items; r rescales the tf-idf weights."""
     s = (ce.astype(np.float32) @ E[items].astype(np.float32).T)
     xs = X[items]
-    l = (cx @ xs.T).toarray()
+    l = (reweight(cx, r) @ reweight(xs, r).T).toarray()
     cb, xb = cx.copy(), xs.copy()
     cb.data[:] = 1; xb.data[:] = 1
     return l, s, (cb @ xb.T).toarray()
@@ -79,12 +90,13 @@ def evt_fire(l, s, N):
 def decide(ce, cx, store, store_sess, refs, ref_sess):
     """All gates for one cue against one store; refs are earlier user turns used as reference cues."""
     N = len(store)
-    L, S, H = scores_of(ce[None], cx, store)
+    r = np.log(1 + (N + 1) / (X[store].getnnz(axis=0) + 0.5)) / IDF_ALL
+    L, S, H = scores_of(ce[None], cx, store, r)
     t, a = v1_best(L, S, H, np.zeros_like(L, bool))
     t, a = float(t[0]), int(a[0])
     swap_p, K = 1.0, len(refs)
     if K and np.isfinite(t):
-        Lr, Sr, Hr = scores_of(E[refs], X[refs], store)
+        Lr, Sr, Hr = scores_of(E[refs], X[refs], store, r)
         tr, _ = v1_best(Lr, Sr, Hr, ref_sess[:, None] == store_sess[None, :])
         swap_p = (1 + np.sum(tr >= t)) / (K + 1)
     ef, ei = evt_fire(L[0], S[0], N)

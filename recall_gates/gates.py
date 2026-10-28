@@ -40,10 +40,15 @@ def recall_v1_gate(lex, sem, shared, n_store):
 
 
 def _exp_tail_p(x, null):
+    """Tail p-values of x; 1 when the null sample cannot carry a tail (fewer than 11 scores, or all tied)."""
+    if len(null) < 11:
+        return np.ones(len(x))
     u = np.quantile(null, 0.9)
     if (null > u).sum() < 10:
         u = np.sort(null)[-11]
     excess = null[null > u] - u
+    if not len(excess):
+        return np.ones(len(x))
     return (len(excess) / len(null)) * np.exp(-np.maximum(x - u, 0) / max(excess.mean(), 1e-6))
 
 

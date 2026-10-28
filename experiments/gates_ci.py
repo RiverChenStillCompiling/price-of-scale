@@ -1,6 +1,8 @@
 """Cluster-aware intervals for the main gates, simultaneous over N, and threshold laws from upper quantiles.
 
-Clusters are questions (LongMemEval) or conversations (LoCoMo). Pointwise intervals are 95%; simultaneous
+Clusters are questions (LongMemEval) or conversations (LoCoMo). Rates are pooled over trials, the estimand of the
+gate tables, and the bootstrap resamples clusters and takes the ratio of summed firings to summed trials.
+Pointwise intervals are 95%; simultaneous
 intervals use Bonferroni over the store sizes. The null maximum is summarised by its mean and its 95% quantile,
 each fitted by a + b sqrt(ln N) and a + b ln N.
 Usage: python gates_ci.py trials.csv out_prefix
@@ -38,9 +40,11 @@ for N in Ns:
     for name, (fire, top) in gates.items():
         for metric, frame, val in (("false_alarm", nul, fire(nul).astype(float)),
                                    ("hit", pos, (fire(pos) & (pos[top].astype(int) == 1)).astype(float))):
-            per = pd.Series(val.values, index=frame.cluster.values).groupby(level=0).mean()
-            boots = np.array([per.values[rng.integers(0, len(per), len(per))].mean() for _ in range(B)])
-            rows.append({"N": N, "gate": name, "metric": metric, "value": per.mean(),
+            per = pd.Series(val.values, index=frame.cluster.values).groupby(level=0).agg(["sum", "count"])
+            k, n = per["sum"].values, per["count"].values
+            idx = rng.integers(0, len(per), (B, len(per)))
+            boots = k[idx].sum(1) / n[idx].sum(1)
+            rows.append({"N": N, "gate": name, "metric": metric, "value": k.sum() / n.sum(),
                          "lo": np.quantile(boots, .025), "hi": np.quantile(boots, .975),
                          "sim_lo": np.quantile(boots, 1 - z_sim), "sim_hi": np.quantile(boots, z_sim), "clusters": len(per)})
 r = pd.DataFrame(rows)
