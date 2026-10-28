@@ -35,6 +35,12 @@ for kind in ("q_after", "q_end"):
         for g in top:
             m, lo, hi = ci(fire[g][d] & (t[top[g]][d] == 1), t.qid[d])
             rows.append({"part": f"{kind}/{ct}", "N": float(t.N[d].median()), "gate": g, "value": m, "lo": lo, "hi": hi, "n": int(d.sum())})
+rng = np.random.default_rng(1)  # separate stream, so the intervals above do not change
+for kind in ("q_after", "q_end"):
+    for ct in ("explicit", "implicit"):
+        d = (t.kind == kind) & (t.cue_type == ct)
+        m, lo, hi = ci(fire["EVT tail"][d] & (t.evt_top_ev[d] == 1), t.qid[d])
+        rows.append({"part": f"{kind}/{ct}", "N": float(t.N[d].median()), "gate": "EVT tail", "value": m, "lo": lo, "hi": hi, "n": int(d.sum())})
 r = pd.DataFrame(rows)
 r.to_csv(out + ".csv", index=False)
 pd.set_option("display.width", 220)

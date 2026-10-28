@@ -61,15 +61,20 @@ def v1_best(L, S, H, mask):
     return b.max(1), b.argmax(1)
 
 def evt_fire(l, s, N):
+    """Exponential-tail gate: whether it fires and the column with the smallest tail p-value over both channels."""
     if len(l) < 11:
-        return 0
+        return 0, 0
     def p(x):
         u = np.quantile(x, 0.9)
         if (x > u).sum() < 10:
             u = np.sort(x)[-11]
         y = x[x > u] - u
         return (len(y) / len(x)) * np.exp(-np.maximum(x - u, 0) / max(y.mean(), 1e-6))
-    return int(min(p(l).min(), p(s).min()) <= ALPHA / (2 * N))
+    pm = np.fmin(p(l), p(s))  # a channel whose tail is undefined (all scores tied) gives NaN and is skipped
+    if np.isnan(pm).all():
+        return 0, 0
+    i = int(np.nanargmin(pm))
+    return int(pm[i] <= ALPHA / (2 * N)), i
 
 def decide(ce, cx, store, store_sess, refs, ref_sess):
     """All gates for one cue against one store; refs are earlier user turns used as reference cues."""
@@ -82,11 +87,12 @@ def decide(ce, cx, store, store_sess, refs, ref_sess):
         Lr, Sr, Hr = scores_of(E[refs], X[refs], store)
         tr, _ = v1_best(Lr, Sr, Hr, ref_sess[:, None] == store_sess[None, :])
         swap_p = (1 + np.sum(tr >= t)) / (K + 1)
+    ef, ei = evt_fire(L[0], S[0], N)
     tn = min(TARGETS, key=lambda x: abs(math.log(max(N, 1) / x)))
     return {"N": N, "v1_z": t, "v1_thr": max(2.0, math.sqrt(2 * math.log(2 * N))) + 0.5, "tau_z": TAU_Z[tn],
             "max_sem": float(S.max()), "max_lex": float(L.max()), "sem_top": int(store[S[0].argmax()]),
             "lex_top": int(store[L[0].argmax()]), "v1_top": int(store[a]) if np.isfinite(t) else -1,
-            "evt": evt_fire(L[0], S[0], N), "swap_p": swap_p, "K": K}
+            "evt": ef, "evt_top": int(store[ei]), "swap_p": swap_p, "K": K}
 
 rows = []
 for q in data:
@@ -132,7 +138,7 @@ for q in data:
             if ctype == "implicit" and not has_icue[qpos[qid]]:
                 continue
             d = decide(ce, cx, seq[:n], ssn[:n], ri, rs)
-            d.update({k + "_ev": int(d[k] in ev) for k in ("sem_top", "lex_top", "v1_top")})
+            d.update({k + "_ev": int(d[k] in ev) for k in ("sem_top", "lex_top", "v1_top", "evt_top")})
             rows.append({"qid": qid, "kind": kind, "cue_type": ctype, **d})
     print(qid, len(seq), flush=True)
 pd.DataFrame(rows).to_csv(out, index=False)
