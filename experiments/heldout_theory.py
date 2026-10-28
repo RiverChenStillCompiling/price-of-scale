@@ -1,8 +1,9 @@
 """Out-of-sample checks of the finite-pool model.
 
-(a) Across users: the threshold and the exact finite-pool prediction come only from the calibration half
+(a) Across questions: the threshold and the exact finite-pool prediction come only from the calibration half
     (its null trials and its cues' score distributions); the prediction is compared with the hit rate observed
-    on the evaluation half, whose questions, users and histories take no part in it.
+    on the evaluation half, whose questions take no part in it. LongMemEval builds every history from one pool of
+    sessions, so the halves share history text; this holds out questions, not users.
 (b) Across store sizes: an effective power law fitted to observed hit rates at N in {32, 64, 128} is
     extrapolated to N in {256, ..., 2048}.
 Usage: python heldout_theory.py scores.npz trials.csv out.json
@@ -37,7 +38,7 @@ def hit_c(n, e, tau, N):
 t = pd.read_csv(trials_csv, keep_default_na=False)
 t["half"] = t.qid.map(lambda q: zlib.crc32(str(q).encode()) % 2)
 rng = np.random.default_rng(0)
-res = {"across_users": {}, "across_N": {}}
+res = {"across_questions": {}, "across_N": {}}
 obs = {}
 for N in Ns:
     cal_cues = [c for c in cues[0] if len(c[0]) >= N]
@@ -50,7 +51,7 @@ for N in Ns:
     pb = [pred_c[rng.integers(0, len(pred_c), len(pred_c))].mean() for _ in range(B)]
     ob = [per_q.values[rng.integers(0, len(per_q), len(per_q))].mean() for _ in range(B)]
     obs[N] = float(per_q.mean())
-    res["across_users"][N] = {"tau": tau, "predicted": float(pred_c.mean()), "pred_lo": float(np.quantile(pb, .025)),
+    res["across_questions"][N] = {"tau": tau, "predicted": float(pred_c.mean()), "pred_lo": float(np.quantile(pb, .025)),
                               "pred_hi": float(np.quantile(pb, .975)), "observed": obs[N],
                               "obs_lo": float(np.quantile(ob, .025)), "obs_hi": float(np.quantile(ob, .975)),
                               "p_N": 1 - (1 - ALPHA) ** (1 / N), "pool_resolution": 1 / float(np.median([len(n) for n, _ in cal_cues]))}
@@ -62,7 +63,7 @@ res["across_N"] = {"fitted_on": fit_N, "kappa_eff": float(-slope),
                                     for n in obs if n > 128}}
 json.dump(res, open(out, "w"), indent=1)
 print("across users (threshold and prediction from the calibration half only):")
-for N, r in res["across_users"].items():
+for N, r in res["across_questions"].items():
     print(f"  N={N:5d} predicted {r['predicted']:.3f} [{r['pred_lo']:.3f}, {r['pred_hi']:.3f}]  observed {r['observed']:.3f} "
           f"[{r['obs_lo']:.3f}, {r['obs_hi']:.3f}]  p_N={r['p_N']:.1e} vs 1/M={r['pool_resolution']:.1e}")
 print(f"across N: kappa_eff={res['across_N']['kappa_eff']:.3f} fitted on {fit_N}")

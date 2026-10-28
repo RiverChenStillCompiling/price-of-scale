@@ -64,12 +64,17 @@ def v1(L, S, H, n):
     return b.max(1), b.argmax(1)
 
 def evt(l, s, N):
-    """Exponential tail fitted to store + background; smallest p-value over the store (first N columns)."""
+    """Exponential tail fitted to store + background; whether the smallest p-value over the store (first N
+    columns) clears alpha / 2N, and the store column that attains it. A channel without a tail gives p = 1."""
     def p(x):
         u = np.quantile(x, 0.9)
         y = x[x > u] - u
+        if not len(y):
+            return np.ones(N)
         return (len(y) / len(x)) * np.exp(-np.maximum(x[:N] - u, 0) / max(y.mean(), 1e-6))
-    return int(min(p(l).min(), p(s).min()) <= ALPHA / (2 * N))
+    pm = np.minimum(p(l), p(s))
+    i = int(pm.argmin())
+    return int(pm[i] <= ALPHA / (2 * N)), i
 
 cue_ids = np.array([tid[r["cue"]] for r in recs])
 by_task = collections.defaultdict(list)
@@ -90,7 +95,9 @@ for ri, r in enumerate(recs):
             for rep in range(1 if size == "natural" else 3):
                 store = np.array(st)
                 if N is not None:
-                    if len(store) >= N:
+                    # Decide on the record's full store, so that the positive and null conditions of a scenario
+                    # enter the same sizes; a store of exactly N needs no filler.
+                    if len(store0) > N:
                         continue
                     store = np.concatenate([store, rng.choice(filler, N - len(store), replace=False)])
                 n = len(store)
@@ -105,7 +112,7 @@ for ri, r in enumerate(recs):
                              "v1_top_ev": top(int(a[0])) if np.isfinite(t[0]) else 0,
                              "max_sem": S[0, :n].max(), "sem_top_ev": top(int(S[0, :n].argmax())),
                              "max_lex": L[0, :n].max(), "lex_top_ev": top(int(L[0, :n].argmax())),
-                             "evt": evt(L[0], S[0], n),
+                             "evt": (e := evt(L[0], S[0], n))[0], "evt_top_ev": top(e[1]),
                              "swap_p": (1 + np.sum(t[1:] >= t[0])) / len(t) if np.isfinite(t[0]) else 1.0,
                              "half": zlib.crc32(r["task"].encode()) % 2})
     if ri % 100 == 0:

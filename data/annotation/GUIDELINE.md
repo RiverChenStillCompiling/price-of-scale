@@ -11,6 +11,8 @@ assistant's memory module brought up on its own (`memory`). Label the note with 
 | 4 | **Cannot tell**: only if the item cannot be decided. |
 
 Every LongMemEval session carries a date, so a note saying that something happened "today" supplies a date.
+(This sentence was added after labelling; the annotators worked from the guideline without it. Future annotation
+should keep it.)
 
 ## Files
 

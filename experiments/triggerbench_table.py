@@ -12,13 +12,14 @@ tc = np.quantile(cal[(cal["size"] == "grown") & (cal.N == 8)].max_sem, 1 - ALPHA
 tz = cal.groupby("Nb").v1_z.quantile(1 - ALPHA)
 ev = t[t.half == 1].copy()
 fire = {"fixed cosine": (ev.max_sem >= tc, "sem_top_ev"), "recall-v1": (ev.v1_z >= ev.v1_thr, "v1_top_ev"),
-        "z-score, oracle": (ev.v1_z >= ev.Nb.map(tz), "v1_top_ev"), "EVT tail": (ev.evt == 1, "v1_top_ev"),
+        "z-score, oracle": (ev.v1_z >= ev.Nb.map(tz), "v1_top_ev"), "EVT tail": (ev.evt == 1, "evt_top_ev"),
         "cue-swap": (ev.swap_p <= ALPHA, "v1_top_ev")}
 rows = []
 for (nb, cond), d in ev.groupby(["Nb", "cond"]):
     for g, (f, top) in fire.items():
         v = f[d.index] & (d[top] == 1) if cond == "pos" else f[d.index]
-        rows.append({"store": nb, "cond": cond, "gate": g, "rate": v.mean(), "n": len(d), "N_median": d.N.median()})
+        rows.append({"store": nb, "cond": cond, "gate": g, "rate": v.mean(), "n": len(d), "tasks": d.task.nunique(),
+                     "N_median": d.N.median()})
 r = pd.DataFrame(rows)
 r.to_csv(sys.argv[2], index=False)
 order = ["8", "base", "32", "128", "40K", "512", "2048"]
